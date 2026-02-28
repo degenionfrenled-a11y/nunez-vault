@@ -1518,27 +1518,22 @@ let settings = { interestPool: 0, totalDistributed: 0, dailyRatePerHead: 5 };
 // ================================================================
 async function api(action, data={}) {
   try {
-    // Use GET with callback for read operations, POST form for writes
     const payload = JSON.stringify({ action, ...data });
     const url = SCRIPT_URL + '?payload=' + encodeURIComponent(payload);
-
-    const res = await fetch(url, {
-      method: 'GET',
-      redirect: 'follow'
-    });
-
+    const res = await fetch(url, { method: 'GET', redirect: 'follow' });
     const text = await res.text();
-
-    if (text.trim().startsWith('<')) {
-      throw new Error('Permission error — please re-deploy your Apps Script with "Who has access: Anyone" and make sure you clicked Authorize.');
-    }
-
+    if (!text || text.trim() === '') throw new Error('Empty response from server.');
+    if (text.trim().startsWith('<')) throw new Error('Google is asking for login. Go to Apps Script → Deploy → Manage Deployments → Edit → set "Who has access" to "Anyone" → Deploy.');
     const json = JSON.parse(text);
     if (!json.success) throw new Error(json.error || 'API error');
     return json;
   } catch(err) {
+    if (err.name === 'TypeError' && err.message.includes('fetch')) {
+      toast('⚠️ Network error. Check your internet connection.', 'error');
+    } else {
+      toast('⚠️ ' + err.message, 'error');
+    }
     console.error('API Error:', err);
-    toast('⚠️ ' + err.message, 'error');
     throw err;
   }
 }
