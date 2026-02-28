@@ -1500,7 +1500,7 @@ select option { background: var(--navy-mid); }
 // ⚙️ GOOGLE SHEETS API URL
 // Paste your Apps Script Web App URL below after deploying
 // ================================================================
-const SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwNjVUHGs-zVQMB2o2kj8LheSqqzvrNtXs6p1RXsPUpiQQTBIL-FlMmXxDfu9RBhfwruA/exec';
 
 // ================================================================
 // IN-MEMORY DATA (loaded fresh from Google Sheets on login)
@@ -1518,18 +1518,21 @@ let settings = { interestPool: 0, totalDistributed: 0, dailyRatePerHead: 5 };
 // ================================================================
 async function api(action, data={}) {
   try {
-    // Build URL with action as query param (GET-style) for CORS compatibility
-    const url = SCRIPT_URL + '?action=' + encodeURIComponent(action);
+    // Use GET with callback for read operations, POST form for writes
+    const payload = JSON.stringify({ action, ...data });
+    const url = SCRIPT_URL + '?payload=' + encodeURIComponent(payload);
+
     const res = await fetch(url, {
-      method: 'POST',
-      body: JSON.stringify({ action, ...data }),
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+      method: 'GET',
+      redirect: 'follow'
     });
+
     const text = await res.text();
-    // Apps Script sometimes returns HTML on auth errors
+
     if (text.trim().startsWith('<')) {
-      throw new Error('Apps Script returned an HTML page. Please check deployment settings — make sure "Who has access" is set to "Anyone".');
+      throw new Error('Permission error — please re-deploy your Apps Script with "Who has access: Anyone" and make sure you clicked Authorize.');
     }
+
     const json = JSON.parse(text);
     if (!json.success) throw new Error(json.error || 'API error');
     return json;
